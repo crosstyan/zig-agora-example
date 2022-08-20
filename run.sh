@@ -1,1 +1,2 @@
-./zig-out/bin/zig-agora
+zig build run
+# ./zig-out/bin/zig-agora

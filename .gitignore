@@ -18,3 +18,7 @@ zig-out/
 /build/
 /build-*/
 /docgen_tmp/
+
+a.out
+main
+test
