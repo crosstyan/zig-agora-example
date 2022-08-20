@@ -1,8 +1,6 @@
 // https://github.com/zigtools/zls/issues/313
 const agora = @import("agora.zig");
-const gst = @cImport({
-  @cInclude("gst/gst.h");
-});
+const gst = @import("cimport.zig");
 const std = @import("std");
 const log = std.log;
 
