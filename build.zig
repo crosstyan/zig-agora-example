@@ -13,6 +13,7 @@ pub fn build(b: *Builder) !void {
     // Standard release options allow the person running `zig build` to select
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
     const mode = b.standardReleaseOptions();
+    // const translate = b.addTranslateC(std.build.FileSource.relative("test_gst.c"));
 
     const exe = b.addExecutable("zig-agora", "src/main.zig");
     // std.log.info("Build root is: {s}", .{b.build_root});
@@ -25,6 +26,9 @@ pub fn build(b: *Builder) !void {
     exe.linkLibC();
     // IT IS DASH NOT UNDERSCORE! FUCK IT!
     exe.linkSystemLibraryName("agora-rtc-sdk");
+    // install gstreamer-1.0 from your package manager before build this
+    // or use pkg-config exe.linkSystemLibraryPkgConfigOnly() 
+    exe.linkSystemLibrary("gstreamer-1.0");
     exe.setBuildMode(mode);
     exe.setTarget(target);
     exe.install();
