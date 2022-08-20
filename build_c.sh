@@ -1,0 +1,1 @@
+zig build-exe c/test.c -lc -L agora_sdk/lib/aarch64/ -lagora-rtc-sdk
