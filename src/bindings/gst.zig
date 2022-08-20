@@ -12468,13 +12468,13 @@ pub fn gst_pad_set_caps(arg_pad: ?*GstPad, arg_caps: [*c]GstCaps) callconv(.C) g
     }
     return res;
 }
-pub extern fn gst_init(argc: [*c]c_int, argv: [*c][*c][*c]u8) void;
-pub extern fn gst_init_check(argc: [*c]c_int, argv: [*c][*c][*c]u8, @"error": [*c][*c]GError) gboolean;
+pub extern fn gst_init(argc: *c_int, argv: *[*][*:0]u8) void;
+pub extern fn gst_init_check(argc: *c_int, argv: *[*][*:0]u8, @"error": *[*:0]GError) gboolean;
 pub extern fn gst_is_initialized() gboolean;
 pub extern fn gst_init_get_option_group() ?*GOptionGroup;
 pub extern fn gst_deinit() void;
-pub extern fn gst_version(major: [*c]guint, minor: [*c]guint, micro: [*c]guint, nano: [*c]guint) void;
-pub extern fn gst_version_string() [*c]gchar;
+pub extern fn gst_version(major: *guint, minor: *guint, micro: *guint, nano: *guint) void;
+pub extern fn gst_version_string() [*:0]gchar;
 pub extern fn gst_segtrap_is_enabled() gboolean;
 pub extern fn gst_segtrap_set_enabled(enabled: gboolean) void;
 pub extern fn gst_registry_fork_is_enabled() gboolean;

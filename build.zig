@@ -1,9 +1,5 @@
 const Builder = @import("std").build.Builder;
 const std = @import("std");
-// var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-// const allocator = gpa.allocator();
-
-// const header_list: []const []const u8 = &.{ "glib.h", "gst/glib-compat.h", "gst/gstenumtypes.h", "gst/gstversion.h", "gst/gstatomicqueue.h", "gst/gstbin.h", "gst/gstbuffer.h", "gst/gstbufferlist.h", "gst/gstbufferpool.h", "gst/gstcaps.h", "gst/gstcapsfeatures.h", "gst/gstchildproxy.h", "gst/gstclock.h", "gst/gstcontrolsource.h", "gst/gstdatetime.h", "gst/gstdebugutils.h", "gst/gstdevice.h", "gst/gstdevicemonitor.h", "gst/gstdeviceprovider.h", "gst/gstdynamictypefactory.h", "gst/gstelement.h", "gst/gstelementmetadata.h", "gst/gsterror.h", "gst/gstevent.h", "gst/gstghostpad.h", "gst/gstinfo.h", "gst/gstiterator.h", "gst/gstmessage.h", "gst/gstmemory.h", "gst/gstmeta.h", "gst/gstminiobject.h", "gst/gstobject.h", "gst/gststreamcollection.h", "gst/gstpad.h", "gst/gstparamspecs.h", "gst/gstpipeline.h", "gst/gstplugin.h", "gst/gstpoll.h", "gst/gstpreset.h", "gst/gstprotection.h", "gst/gstquery.h", "gst/gstregistry.h", "gst/gstpromise.h", "gst/gstsample.h", "gst/gstsegment.h", "gst/gststreams.h", "gst/gststructure.h", "gst/gstsystemclock.h", "gst/gsttaglist.h", "gst/gsttagsetter.h", "gst/gsttask.h", "gst/gsttaskpool.h", "gst/gsttoc.h", "gst/gsttocsetter.h", "gst/gsttracer.h", "gst/gsttracerfactory.h", "gst/gsttracerrecord.h", "gst/gsttypefind.h", "gst/gsttypefindfactory.h", "gst/gsturi.h", "gst/gstutils.h", "gst/gstvalue.h", "gst/gstparse.h" };
 const header_list: []const []const u8 = &.{"gst/gst.h"};
 
 pub fn build(b: *Builder) !void {

@@ -175,7 +175,7 @@ pub const log_config_t = extern struct {
     log_disable: bool,
     log_disable_desensitize: bool,
     log_level: rtc_log_level_e,
-    log_path: [*c]const u8,
+    log_path: [*:0]const u8,
 };
 pub const rtc_service_option_t = extern struct {
     area_code: u32,
@@ -230,28 +230,28 @@ pub const agora_rtc_event_handler_t = extern struct {
 };
 pub extern fn agora_rtc_get_version() [*:0]const u8;
 pub extern fn agora_rtc_err_2_str(err: c_int) [*:0]const u8;
-pub extern fn agora_rtc_license_gen_credential(credential: [*c]u8, credential_len: [*c]c_uint) c_int;
-pub extern fn agora_rtc_license_verify(certificate: [*c]const u8, certificate_len: c_int, credential: [*c]const u8, credential_len: c_int) c_int;
-pub extern fn agora_rtc_init(app_id: [*c]const u8, event_handler: [*c]const agora_rtc_event_handler_t, option: [*c]rtc_service_option_t) c_int;
+pub extern fn agora_rtc_license_gen_credential(credential: [*]u8, credential_len: *c_uint) c_int;
+pub extern fn agora_rtc_license_verify(certificate: [*]const u8, certificate_len: c_int, credential: [*]const u8, credential_len: c_int) c_int;
+pub extern fn agora_rtc_init(app_id: [*:0]const u8, event_handler: *const agora_rtc_event_handler_t, option: *rtc_service_option_t) c_int;
 pub extern fn agora_rtc_fini() c_int;
 pub extern fn agora_rtc_set_log_level(level: rtc_log_level_e) c_int;
 pub extern fn agora_rtc_config_log(size_per_file: c_int, max_file_count: c_int) c_int;
-pub extern fn agora_rtc_create_connection(conn_id: [*c]connection_id_t) c_int;
+pub extern fn agora_rtc_create_connection(conn_id: [*:0]connection_id_t) c_int;
 pub extern fn agora_rtc_destroy_connection(conn_id: connection_id_t) c_int;
-pub extern fn agora_rtc_get_connection_info(conn_id: connection_id_t, conn_info: [*c]connection_info_t) c_int;
-pub extern fn agora_rtc_join_channel(conn_id: connection_id_t, channel_name: [*c]const u8, uid: u32, token: [*c]const u8, options: [*c]rtc_channel_options_t) c_int;
+pub extern fn agora_rtc_get_connection_info(conn_id: connection_id_t, conn_info: *connection_info_t) c_int;
+pub extern fn agora_rtc_join_channel(conn_id: connection_id_t, channel_name: [*:0]const u8, uid: u32, token: [*:0]const u8, options: *rtc_channel_options_t) c_int;
 pub extern fn agora_rtc_leave_channel(conn_id: connection_id_t) c_int;
-pub extern fn agora_rtc_renew_token(conn_id: connection_id_t, token: [*c]const u8) c_int;
+pub extern fn agora_rtc_renew_token(conn_id: connection_id_t, token: [*:0]const u8) c_int;
 pub extern fn agora_rtc_notify_network_event(event: network_event_type_e) c_int;
 pub extern fn agora_rtc_mute_local_audio(conn_id: connection_id_t, mute: bool) c_int;
 pub extern fn agora_rtc_mute_local_video(conn_id: connection_id_t, mute: bool) c_int;
 pub extern fn agora_rtc_mute_remote_audio(conn_id: connection_id_t, remote_uid: u32, mute: bool) c_int;
 pub extern fn agora_rtc_mute_remote_video(conn_id: connection_id_t, remote_uid: u32, mute: bool) c_int;
 pub extern fn agora_rtc_request_video_key_frame(conn_id: connection_id_t, remote_uid: u32, stream_type: video_stream_type_e) c_int;
-pub extern fn agora_rtc_send_audio_data(conn_id: connection_id_t, data_ptr: ?*const anyopaque, data_len: usize, info_ptr: [*c]audio_frame_info_t) c_int;
-pub extern fn agora_rtc_send_video_data(conn_id: connection_id_t, data_ptr: ?*const anyopaque, data_len: usize, info_ptr: [*c]video_frame_info_t) c_int;
+pub extern fn agora_rtc_send_audio_data(conn_id: connection_id_t, data_ptr: ?*const anyopaque, data_len: usize, info_ptr: *audio_frame_info_t) c_int;
+pub extern fn agora_rtc_send_video_data(conn_id: connection_id_t, data_ptr: ?*const anyopaque, data_len: usize, info_ptr: *video_frame_info_t) c_int;
 pub extern fn agora_rtc_set_bwe_param(conn_id: connection_id_t, min_bps: u32, max_bps: u32, start_bps: u32) c_int;
-pub extern fn agora_rtc_set_params(params: [*c]const u8) c_int;
+pub extern fn agora_rtc_set_params(params: [*:0]const u8) c_int;
 pub const RTM_EVENT_TYPE_LOGIN: c_int = 0;
 pub const RTM_EVENT_TYPE_KICKOFF: c_int = 1;
 pub const RTM_EVENT_TYPE_EXIT: c_int = 2;
@@ -268,8 +268,8 @@ pub const ERR_RTM_TOKEN_EXPIRED: c_int = 109;
 pub const ERR_RTM_INVALID_TOKEN: c_int = 110;
 pub const rtm_err_code_e = c_uint;
 pub const agora_rtm_handler_t = extern struct {
-    on_rtm_data: ?fn ([*c]const u8, ?*const anyopaque, usize) callconv(.C) void,
-    on_rtm_event: ?fn ([*c]const u8, rtm_event_type_e, rtm_err_code_e) callconv(.C) void,
+    on_rtm_data: ?fn ([*:0]const u8, ?*const anyopaque, usize) callconv(.C) void,
+    on_rtm_event: ?fn ([*:0]const u8, rtm_event_type_e, rtm_err_code_e) callconv(.C) void,
     on_send_rtm_data_result: ?fn (u32, rtm_err_code_e) callconv(.C) void,
 };
 pub extern fn agora_rtc_login_rtm(rtm_uid: [*c]const u8, rtm_token: [*c]const u8, handler: [*c]const agora_rtm_handler_t) c_int;
