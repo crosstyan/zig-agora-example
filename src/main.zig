@@ -1,6 +1,6 @@
 // https://github.com/zigtools/zls/issues/313
-const agora = @import("agora.zig");
-const gst = @import("cimport.zig");
+const agora = @import("bindings/agora.zig");
+const gst = @import("bindings/gst.zig");
 const std = @import("std");
 const log = std.log;
 
@@ -15,7 +15,7 @@ pub fn main() void {
   _ = gst.gst_init(&argc, @ptrCast([*c][*c][*c]u8,&args));
   _ = gst.gst_version (&major, &minor, &micro, &nano);
 
-  var nano_str = switch (nano) {
+  var nano_str: []const u8 = switch (nano) {
     1 => "(CVS)",
     2 => "(Prerelease)",
     else => ""
