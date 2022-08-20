@@ -12,6 +12,7 @@ pub fn build(b: *Builder) !void {
     const mode = b.standardReleaseOptions();
 
     const gst_rpath = "/usr/include/gstreamer-1.0";
+    // TODO: use struct
     for (header_list) |header| {
         const gst_file_path: []const u8 = try std.fs.path.join(b.allocator, &.{gst_rpath, header});
         var fs: std.build.FileSource = std.build.FileSource{ .path = gst_file_path };
@@ -23,12 +24,12 @@ pub fn build(b: *Builder) !void {
         // https://github.com/ziglang/zig/issues/11040
         c.defineCMacroRaw("__sched_priority");
         c.output_dir = "src/bindings";
+        const header_rpath = "src/bindings/gst.zig";
         const cwd: std.fs.Dir = try std.fs.openDirAbsolute(b.build_root, std.fs.Dir.OpenDirOptions{
             .access_sub_paths = true,
             .no_follow = true
         });
         // if file not existed yet, build it.
-        const header_rpath = "src/bindings/gst.zig";
         _ = cwd.access(header_rpath, std.fs.File.OpenFlags{
             .mode = .read_only
         }) catch |e| {
