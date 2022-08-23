@@ -216,27 +216,27 @@ pub const agora_rtc_event_handler_t = extern struct {
     on_join_channel_success: ?fn (connection_id_t, u32, c_int) callconv(.C) void,
     on_connection_lost: ?fn (connection_id_t) callconv(.C) void,
     on_rejoin_channel_success: ?fn (connection_id_t, u32, c_int) callconv(.C) void,
-    on_error: ?fn (connection_id_t, c_int, [*c]const u8) callconv(.C) void,
+    on_error: ?fn (connection_id_t, c_int, [*:0]const u8) callconv(.C) void,
     on_user_joined: ?fn (connection_id_t, u32, c_int) callconv(.C) void,
     on_user_offline: ?fn (connection_id_t, u32, c_int) callconv(.C) void,
     on_user_mute_audio: ?fn (connection_id_t, u32, bool) callconv(.C) void,
     on_user_mute_video: ?fn (connection_id_t, u32, bool) callconv(.C) void,
-    on_audio_data: ?fn (connection_id_t, u32, u16, ?*const anyopaque, usize, [*c]const audio_frame_info_t) callconv(.C) void,
-    on_mixed_audio_data: ?fn (connection_id_t, ?*const anyopaque, usize, [*c]const audio_frame_info_t) callconv(.C) void,
-    on_video_data: ?fn (connection_id_t, u32, u16, ?*const anyopaque, usize, [*c]const video_frame_info_t) callconv(.C) void,
+    on_audio_data: ?fn (connection_id_t, u32, u16, ?*const anyopaque, usize, *const audio_frame_info_t) callconv(.C) void,
+    on_mixed_audio_data: ?fn (connection_id_t, ?*const anyopaque, usize, *const audio_frame_info_t) callconv(.C) void,
+    on_video_data: ?fn (connection_id_t, u32, u16, ?*const anyopaque, usize, *const video_frame_info_t) callconv(.C) void,
     on_target_bitrate_changed: ?fn (connection_id_t, u32) callconv(.C) void,
     on_key_frame_gen_req: ?fn (connection_id_t, u32, video_stream_type_e) callconv(.C) void,
-    on_token_privilege_will_expire: ?fn (connection_id_t, [*c]const u8) callconv(.C) void,
+    on_token_privilege_will_expire: ?fn (connection_id_t, [*:0]const u8) callconv(.C) void,
 };
 pub extern fn agora_rtc_get_version() [*:0]const u8;
 pub extern fn agora_rtc_err_2_str(err: c_int) [*:0]const u8;
 pub extern fn agora_rtc_license_gen_credential(credential: [*]u8, credential_len: *c_uint) c_int;
-pub extern fn agora_rtc_license_verify(certificate: [*]const u8, certificate_len: c_int, credential: [*]const u8, credential_len: c_int) c_int;
+pub extern fn agora_rtc_license_verify(certificate: [*]const u8, certificate_len: c_int, credential: ?[*]const u8, credential_len: c_int) c_int;
 pub extern fn agora_rtc_init(app_id: [*:0]const u8, event_handler: *const agora_rtc_event_handler_t, option: *rtc_service_option_t) c_int;
 pub extern fn agora_rtc_fini() c_int;
 pub extern fn agora_rtc_set_log_level(level: rtc_log_level_e) c_int;
 pub extern fn agora_rtc_config_log(size_per_file: c_int, max_file_count: c_int) c_int;
-pub extern fn agora_rtc_create_connection(conn_id: [*:0]connection_id_t) c_int;
+pub extern fn agora_rtc_create_connection(conn_id: *connection_id_t) c_int;
 pub extern fn agora_rtc_destroy_connection(conn_id: connection_id_t) c_int;
 pub extern fn agora_rtc_get_connection_info(conn_id: connection_id_t, conn_info: *connection_info_t) c_int;
 pub extern fn agora_rtc_join_channel(conn_id: connection_id_t, channel_name: [*:0]const u8, uid: u32, token: [*:0]const u8, options: *rtc_channel_options_t) c_int;
