@@ -22,3 +22,5 @@ zig-out/
 a.out
 main
 test
+*.log
+logs
