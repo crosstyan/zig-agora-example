@@ -3,6 +3,7 @@
 const agora = @import("bindings/agora.zig");
 const gst = @import("bindings/gst.zig");
 const std = @import("std");
+const toml = @import("toml");
 const defaultHandler = @import("handlers.zig");
 const log = std.log;
 const File = std.fs.File;

@@ -1,0 +1,3 @@
+[submodule "libs/zig-toml"]
+	path = libs/zig-toml
+	url = https://github.com/aeronavery/zig-toml
