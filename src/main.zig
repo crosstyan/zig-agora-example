@@ -22,7 +22,7 @@ fn logWhenError(code: c_int) void {
     }
 }
 
-const NewSampleParams = struct  {
+const NewSampleParams = struct {
     conn_id: u32,
     file_handle: ?File,
     video_info: *agora.video_frame_info_t,
@@ -38,7 +38,9 @@ fn new_sample_cb(appsink: *gst.GstAppSink, user_data: ?*anyopaque) callconv(.C) 
     // Returns – TRUE if the map operation was successful.
     // https://github.com/ziglang/zig/issues/2841
     var success = gst.gst_memory_map(mem, &info, gst.GST_MAP_READ) != 0;
-    defer if (success) { gst.gst_memory_unmap(mem, &info); };
+    defer if (success) {
+        gst.gst_memory_unmap(mem, &info);
+    };
     if (success) {
         var code = agora.agora_rtc_send_video_data(params.*.conn_id, info.data, info.size, params.*.video_info);
         if (code != 0) {
@@ -171,14 +173,14 @@ pub fn main() !void {
     log.info("agora_rtc joined channel {s}", .{channel_name});
     _ = agora.agora_rtc_mute_local_audio(conn_id, true);
 
-    var video_info = agora.video_frame_info_t {
+    var video_info = agora.video_frame_info_t{
         .data_type = agora.VIDEO_DATA_TYPE_H264,
         .stream_type = agora.VIDEO_STREAM_LOW,
         .frame_type = agora.VIDEO_FRAME_AUTO_DETECT,
-        .frame_rate = 0,  
+        .frame_rate = 0,
     };
 
-    var user_data = NewSampleParams {
+    var user_data = NewSampleParams{
         .conn_id = conn_id,
         .file_handle = null,
         .video_info = &video_info,
@@ -192,5 +194,5 @@ pub fn main() !void {
     // sleep for 30 seconds
     const secs = 30 * 1000 * 1000 * 1000;
     // parameter is in nanoseconds
-    std.time.sleep(secs); 
+    std.time.sleep(secs);
 }
