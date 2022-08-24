@@ -29,7 +29,6 @@ const NewSampleParams = struct {
     video_info: *agora.video_frame_info_t,
 };
 
-// fn sliceToSen
 
 // https://github.com/ziglang/zig/issues/1717
 fn new_sample_cb(appsink: *gst.GstAppSink, user_data: ?*anyopaque) callconv(.C) gst.GstFlowReturn {
