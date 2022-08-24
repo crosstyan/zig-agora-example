@@ -7,6 +7,7 @@ const known = @import("known");
 const defaultHandler = @import("handlers.zig");
 const log = std.log;
 const File = std.fs.File;
+const Allocator = std.mem.Allocator;
 
 fn panicWhenError(code: c_int) void {
     if (code != 0) {
@@ -56,9 +57,6 @@ fn new_sample_cb(appsink: *gst.GstAppSink, user_data: ?*anyopaque) callconv(.C) 
     return gst.GST_FLOW_OK;
 }
 
-var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-const allocator: std.mem.Allocator = gpa.allocator();
-
 const AppConfig = struct {
     cert_path: []const u8,
     app_id: []const u8,
@@ -68,7 +66,17 @@ const AppConfig = struct {
     uid: u32
 };
 
+// default 0 sentinel
+fn toOwnedSentinel(comptime T:type, allocator: Allocator, from: []const T) ![*:0]const T {
+    var array_list = std.ArrayList(u8).init(allocator);
+    try array_list.appendSlice(from);
+    var slice_sentinel = try array_list.toOwnedSliceSentinel(0);
+    return @ptrCast([*:0]const T, slice_sentinel);
+}
+
 pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator: Allocator = gpa.allocator();
     const config_name = "agora-zig.json";
     const local_config_path = (try known.getPath(allocator, known.KnownFolder.local_configuration)) orelse unreachable;
     defer allocator.free(local_config_path);
@@ -130,15 +138,10 @@ pub fn main() !void {
     const config: AppConfig = try std.json.parse(AppConfig, &token_stream, .{.allocator = allocator, .ignore_unknown_fields = false});
 
     // https://www.huy.rocks/everyday/01-04-2022-zig-strings-in-5-minutes
-    var app_id_list = std.ArrayList(u8).init(allocator);
-    defer app_id_list.deinit();
-    try app_id_list.appendSlice(config.app_id);
-    var app_id_sentinel = try app_id_list.toOwnedSliceSentinel(0);
-    const app_id = @ptrCast([*:0]const u8, app_id_sentinel);
-    log.info("content: {s}, len: {}", .{app_id, std.mem.len(app_id)});
-    const channel_name: [:0]const u8 = "test";
-    const app_token: [:0]const u8 = "007eJxTYGj+/iiralfpa76AYn8j3nwV82MezTuifDn7ws3WCPY901FgMDY3tUxLsTQ0MEw1MDGwNLEws0w1TzWzTLJMMk5LNTMJaGFJvnCVNfntww2sjAwQCOKzMJSkFpcwMAAA6z8gJA==";
-    const log_path: [:0]const u8 = "logs";
+    const app_id = try toOwnedSentinel(u8, allocator, config.app_id);
+    const channel_name = try toOwnedSentinel(u8, allocator, config.channel_name);
+    const app_token = try toOwnedSentinel(u8, allocator, config.app_token);
+    const log_path = try toOwnedSentinel(u8, allocator, config.log_path);
     const uid: u32 = config.uid;
     const pipeline: [:0]const u8 =
         \\ videotestsrc name=src is-live=true ! 
