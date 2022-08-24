@@ -28,6 +28,8 @@ const NewSampleParams = struct {
     video_info: *agora.video_frame_info_t,
 };
 
+// fn sliceToSen
+
 // https://github.com/ziglang/zig/issues/1717
 fn new_sample_cb(appsink: *gst.GstAppSink, user_data: ?*anyopaque) callconv(.C) gst.GstFlowReturn {
     var params = @ptrCast(*NewSampleParams, @alignCast(@alignOf(*NewSampleParams), user_data));
@@ -75,8 +77,10 @@ pub fn main() !void {
     log.info("Try to read config path in {s}", .{config_path});
     const config_file = std.fs.openFileAbsolute(config_path, std.fs.File.OpenFlags{ .mode = File.OpenMode.read_only }) catch |err| {
         switch (err) {
+            // Create one if file is not existing
             error.FileNotFound => {
                 // https://www.huy.rocks/everyday/01-09-2022-zig-json-in-5-minutes
+                // https://ziglearn.org/chapter-2/#json
                 const home_path = (try known.getPath(allocator, known.KnownFolder.home)) orelse unreachable;
                 defer allocator.free(home_path);
                 const cert_path_default = try std.fs.path.join(allocator, &.{home_path, "certificate.bin"});
@@ -93,9 +97,9 @@ pub fn main() !void {
                 defer str.deinit();
                 try std.json.stringify(default_config, .{}, str.writer());
                 const fmt = 
-                    \\Can't find config at {s} and we have created a default one for you. 
-                    \\ Please fill your app id and token. 
-                    \\ I will throw a error now.
+                    \\I Can't find config at {s} and I have created a default one for you. 
+                    \\Please fill your app id and token. 
+                    \\I will throw a error now.
                 ;
                 const dir = try std.fs.openDirAbsolute(local_config_path, std.fs.Dir.OpenDirOptions{.access_sub_paths = false, .no_follow = true});
                 const flags = std.fs.File.CreateFlags {
@@ -108,7 +112,9 @@ pub fn main() !void {
                 };
                 const file = try dir.createFile(config_name, flags);
                 _ = try file.write(str.toOwnedSlice());
-                std.debug.panic(fmt, .{config_path});
+                log.err(fmt, .{config_path});
+                // exit normally
+                std.os.exit(0);
             },
             else => {
                 return err;
@@ -117,14 +123,23 @@ pub fn main() !void {
 
     };
     defer config_file.close();
-    const config = try config_file.readToEndAlloc(allocator, 5120);
-    std.io.getStdOut().writer().print("Config Dump:\n{s}\n", .{config}) catch unreachable;
+    const config_raw = try config_file.readToEndAlloc(allocator, 5120);
+    defer allocator.free(config_raw);
+    std.io.getStdOut().writer().print("Config Dump:\n{s}\n", .{config_raw}) catch unreachable;
+    var token_stream = std.json.TokenStream.init(config_raw);
+    const config: AppConfig = try std.json.parse(AppConfig, &token_stream, .{.allocator = allocator, .ignore_unknown_fields = false});
 
-    const app_id: [:0]const u8 = "3759fd9101e04094869e7e69b9b3fe64";
+    // https://www.huy.rocks/everyday/01-04-2022-zig-strings-in-5-minutes
+    var app_id_list = std.ArrayList(u8).init(allocator);
+    defer app_id_list.deinit();
+    try app_id_list.appendSlice(config.app_id);
+    var app_id_sentinel = try app_id_list.toOwnedSliceSentinel(0);
+    const app_id = @ptrCast([*:0]const u8, app_id_sentinel);
+    log.info("content: {s}, len: {}", .{app_id, std.mem.len(app_id)});
     const channel_name: [:0]const u8 = "test";
     const app_token: [:0]const u8 = "007eJxTYGj+/iiralfpa76AYn8j3nwV82MezTuifDn7ws3WCPY901FgMDY3tUxLsTQ0MEw1MDGwNLEws0w1TzWzTLJMMk5LNTMJaGFJvnCVNfntww2sjAwQCOKzMJSkFpcwMAAA6z8gJA==";
     const log_path: [:0]const u8 = "logs";
-    const uid: u32 = 1234;
+    const uid: u32 = config.uid;
     const pipeline: [:0]const u8 =
         \\ videotestsrc name=src is-live=true ! 
         \\ clockoverlay ! 
