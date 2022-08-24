@@ -5,6 +5,7 @@ const gst = @import("bindings/gst.zig");
 const std = @import("std");
 const defaultHandler = @import("handlers.zig");
 const log = std.log;
+const File = std.fs.File;
 
 fn panicWhenError(code: c_int) void {
     if (code != 0) {
@@ -18,7 +19,6 @@ var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const allocator: std.mem.Allocator = gpa.allocator();
 
 pub fn main() !void {
-    const File = std.fs.File;
     const app_id: [:0]const u8 = "3759fd9101e04094869e7e69b9b3fe64";
     const channel_name: [:0]const u8 = "test";
     const app_token: [:0]const u8 = "007eJxTYGj+/iiralfpa76AYn8j3nwV82MezTuifDn7ws3WCPY901FgMDY3tUxLsTQ0MEw1MDGwNLEws0w1TzWzTLJMMk5LNTMJaGFJvnCVNfntww2sjAwQCOKzMJSkFpcwMAAA6z8gJA==";
@@ -35,22 +35,13 @@ pub fn main() !void {
     var args = std.os.argv;
     var argc = @intCast(c_int, args.len);
 
-    var major: u32 = undefined;
-    var minor: u32 = undefined;
-    var micro: u32 = undefined;
-    var nano: u32 = undefined;
     _ = gst.gst_init(&argc, @ptrCast(*[*][*:0]u8, &args));
     defer gst.gst_deinit();
-    _ = gst.gst_version(&major, &minor, &micro, &nano);
     const gst_version_str = gst.gst_version_string();
+    log.info("{s}", .{gst_version_str});
 
-    const nano_str: []const u8 = switch (nano) {
-        1 => "(CVS)",
-        2 => "(Prerelease)",
-        else => "",
-    };
-
-    var err = agora.agora_rtc_license_verify(@ptrCast([*]const u8, cert_str), @intCast(c_int, cert_str.len), null, 0);
+    var err: c_int = undefined;
+    err = agora.agora_rtc_license_verify(@ptrCast([*]const u8, cert_str), @intCast(c_int, cert_str.len), null, 0);
     panicWhenError(err);
     log.info("agora_rtc_license_verify success", .{});
 
@@ -93,6 +84,7 @@ pub fn main() !void {
         .audio_codec_opt = codec_opt,
         .enable_aut_encryption = false,
     };
+
     err = agora.agora_rtc_init(app_id, &handler, &service_option);
     panicWhenError(err);
     defer {
@@ -122,6 +114,4 @@ pub fn main() !void {
     log.info("agora_rtc joined channel {s}", .{channel_name});
     _ = agora.agora_rtc_mute_local_audio(conn_id, true);
 
-    log.info("GStreamer {}.{}.{} {s}", .{ major, minor, micro, nano_str });
-    log.info("{s} (from gst_version_string)", .{gst_version_str});
 }
