@@ -53,6 +53,7 @@ pub fn build(b: *Builder) !void {
     // install gstreamer-1.0 from your package manager before build this
     // or use pkg-config exe.linkSystemLibraryPkgConfigOnly()
     exe.linkSystemLibrary("gstreamer-1.0");
+    exe.linkSystemLibrary("gstreamer-app-1.0");
     exe.setBuildMode(mode);
     exe.setTarget(target);
     exe.install();

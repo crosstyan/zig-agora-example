@@ -443,7 +443,7 @@ pub extern fn g_intern_static_string(string: [*c]const gchar) [*c]const gchar;
 pub const struct__GError = extern struct {
     domain: GQuark,
     code: gint,
-    message: [*c]gchar,
+    message: [*:0]gchar,
 };
 pub const GError = struct__GError;
 pub const GErrorInitFunc = ?fn ([*c]GError) callconv(.C) void;
@@ -7397,7 +7397,7 @@ pub const struct__GstPad = extern struct {
     stream_rec_lock: GRecMutex,
     task: [*c]GstTask,
     block_cond: GCond,
-    probes: GHookList,
+    probes: *GHookList,
     mode: GstPadMode,
     activatefunc: GstPadActivateFunction,
     activatedata: gpointer,
@@ -10839,9 +10839,9 @@ pub extern fn gst_bin_get_type() GType;
 pub extern fn gst_bin_new(name: [*c]const gchar) [*c]GstElement;
 pub extern fn gst_bin_add(bin: [*c]GstBin, element: [*c]GstElement) gboolean;
 pub extern fn gst_bin_remove(bin: [*c]GstBin, element: [*c]GstElement) gboolean;
-pub extern fn gst_bin_get_by_name(bin: [*c]GstBin, name: [*c]const gchar) [*c]GstElement;
-pub extern fn gst_bin_get_by_name_recurse_up(bin: [*c]GstBin, name: [*c]const gchar) [*c]GstElement;
-pub extern fn gst_bin_get_by_interface(bin: [*c]GstBin, iface: GType) [*c]GstElement;
+pub extern fn gst_bin_get_by_name(bin: *GstBin, name: [*:0]const gchar) [*c]GstElement;
+pub extern fn gst_bin_get_by_name_recurse_up(bin: *GstBin, name: [*:0]const gchar) [*c]GstElement;
+pub extern fn gst_bin_get_by_interface(bin: *GstBin, iface: GType) [*c]GstElement;
 pub extern fn gst_bin_iterate_elements(bin: [*c]GstBin) [*c]GstIterator;
 pub extern fn gst_bin_iterate_sorted(bin: [*c]GstBin) [*c]GstIterator;
 pub extern fn gst_bin_iterate_recurse(bin: [*c]GstBin) [*c]GstIterator;
@@ -12027,7 +12027,7 @@ pub extern fn gst_parse_context_new() ?*GstParseContext;
 pub extern fn gst_parse_context_get_missing_elements(context: ?*GstParseContext) [*c][*c]gchar;
 pub extern fn gst_parse_context_free(context: ?*GstParseContext) void;
 pub extern fn gst_parse_context_copy(context: ?*const GstParseContext) ?*GstParseContext;
-pub extern fn gst_parse_launch(pipeline_description: [*c]const gchar, @"error": [*c][*c]GError) [*c]GstElement;
+pub extern fn gst_parse_launch(pipeline_description: [*:0]const gchar, @"error": ?**GError) [*c]GstElement;
 pub extern fn gst_parse_launchv(argv: [*c][*c]const gchar, @"error": [*c][*c]GError) [*c]GstElement;
 pub extern fn gst_parse_launch_full(pipeline_description: [*c]const gchar, context: ?*GstParseContext, flags: GstParseFlags, @"error": [*c][*c]GError) [*c]GstElement;
 pub extern fn gst_parse_launchv_full(argv: [*c][*c]const gchar, context: ?*GstParseContext, flags: GstParseFlags, @"error": [*c][*c]GError) [*c]GstElement;
@@ -12468,7 +12468,7 @@ pub fn gst_pad_set_caps(arg_pad: ?*GstPad, arg_caps: [*c]GstCaps) callconv(.C) g
     }
     return res;
 }
-pub extern fn gst_init(argc: *c_int, argv: *[*][*:0]u8) void;
+pub extern fn gst_init(argc: ?*c_int, argv: ?*[*][*:0]u8) void;
 pub extern fn gst_init_check(argc: *c_int, argv: *[*][*:0]u8, @"error": *[*:0]GError) gboolean;
 pub extern fn gst_is_initialized() gboolean;
 pub extern fn gst_init_get_option_group() ?*GOptionGroup;
@@ -12481,6 +12481,431 @@ pub extern fn gst_registry_fork_is_enabled() gboolean;
 pub extern fn gst_registry_fork_set_enabled(enabled: gboolean) void;
 pub extern fn gst_update_registry() gboolean;
 pub extern fn gst_get_main_executable_path() [*c]const gchar;
+pub const GST_BASE_SRC_FLAG_STARTING: c_int = 16384;
+pub const GST_BASE_SRC_FLAG_STARTED: c_int = 32768;
+pub const GST_BASE_SRC_FLAG_LAST: c_int = 1048576;
+pub const GstBaseSrcFlags = c_uint;
+pub const struct__GstBaseSrcPrivate = opaque {};
+pub const GstBaseSrcPrivate = struct__GstBaseSrcPrivate;
+pub const struct__GstBaseSrc = extern struct {
+    element: GstElement,
+    srcpad: ?*GstPad,
+    live_lock: GMutex,
+    live_cond: GCond,
+    is_live: gboolean,
+    live_running: gboolean,
+    blocksize: guint,
+    can_activate_push: gboolean,
+    random_access: gboolean,
+    clock_id: GstClockID,
+    segment: GstSegment,
+    need_newsegment: gboolean,
+    num_buffers: gint,
+    num_buffers_left: gint,
+    typefind: gboolean,
+    running: gboolean,
+    pending_seek: [*c]GstEvent,
+    priv: ?*GstBaseSrcPrivate,
+    _gst_reserved: [20]gpointer,
+};
+pub const GstBaseSrc = struct__GstBaseSrc;
+pub const struct__GstBaseSrcClass = extern struct {
+    parent_class: GstElementClass,
+    get_caps: ?fn ([*c]GstBaseSrc, [*c]GstCaps) callconv(.C) [*c]GstCaps,
+    negotiate: ?fn ([*c]GstBaseSrc) callconv(.C) gboolean,
+    fixate: ?fn ([*c]GstBaseSrc, [*c]GstCaps) callconv(.C) [*c]GstCaps,
+    set_caps: ?fn ([*c]GstBaseSrc, [*c]GstCaps) callconv(.C) gboolean,
+    decide_allocation: ?fn ([*c]GstBaseSrc, [*c]GstQuery) callconv(.C) gboolean,
+    start: ?fn ([*c]GstBaseSrc) callconv(.C) gboolean,
+    stop: ?fn ([*c]GstBaseSrc) callconv(.C) gboolean,
+    get_times: ?fn ([*c]GstBaseSrc, [*c]GstBuffer, [*c]GstClockTime, [*c]GstClockTime) callconv(.C) void,
+    get_size: ?fn ([*c]GstBaseSrc, [*c]guint64) callconv(.C) gboolean,
+    is_seekable: ?fn ([*c]GstBaseSrc) callconv(.C) gboolean,
+    prepare_seek_segment: ?fn ([*c]GstBaseSrc, [*c]GstEvent, [*c]GstSegment) callconv(.C) gboolean,
+    do_seek: ?fn ([*c]GstBaseSrc, [*c]GstSegment) callconv(.C) gboolean,
+    unlock: ?fn ([*c]GstBaseSrc) callconv(.C) gboolean,
+    unlock_stop: ?fn ([*c]GstBaseSrc) callconv(.C) gboolean,
+    query: ?fn ([*c]GstBaseSrc, [*c]GstQuery) callconv(.C) gboolean,
+    event: ?fn ([*c]GstBaseSrc, [*c]GstEvent) callconv(.C) gboolean,
+    create: ?fn ([*c]GstBaseSrc, guint64, guint, [*c][*c]GstBuffer) callconv(.C) GstFlowReturn,
+    alloc: ?fn ([*c]GstBaseSrc, guint64, guint, [*c][*c]GstBuffer) callconv(.C) GstFlowReturn,
+    fill: ?fn ([*c]GstBaseSrc, guint64, guint, [*c]GstBuffer) callconv(.C) GstFlowReturn,
+    _gst_reserved: [20]gpointer,
+};
+pub const GstBaseSrcClass = struct__GstBaseSrcClass;
+pub extern fn gst_base_src_get_type() GType;
+pub extern fn gst_base_src_wait_playing(src: [*c]GstBaseSrc) GstFlowReturn;
+pub extern fn gst_base_src_set_live(src: [*c]GstBaseSrc, live: gboolean) void;
+pub extern fn gst_base_src_is_live(src: [*c]GstBaseSrc) gboolean;
+pub extern fn gst_base_src_set_format(src: [*c]GstBaseSrc, format: GstFormat) void;
+pub extern fn gst_base_src_set_dynamic_size(src: [*c]GstBaseSrc, dynamic: gboolean) void;
+pub extern fn gst_base_src_set_automatic_eos(src: [*c]GstBaseSrc, automatic_eos: gboolean) void;
+pub extern fn gst_base_src_set_async(src: [*c]GstBaseSrc, @"async": gboolean) void;
+pub extern fn gst_base_src_is_async(src: [*c]GstBaseSrc) gboolean;
+pub extern fn gst_base_src_negotiate(src: [*c]GstBaseSrc) gboolean;
+pub extern fn gst_base_src_start_complete(basesrc: [*c]GstBaseSrc, ret: GstFlowReturn) void;
+pub extern fn gst_base_src_start_wait(basesrc: [*c]GstBaseSrc) GstFlowReturn;
+pub extern fn gst_base_src_query_latency(src: [*c]GstBaseSrc, live: [*c]gboolean, min_latency: [*c]GstClockTime, max_latency: [*c]GstClockTime) gboolean;
+pub extern fn gst_base_src_set_blocksize(src: [*c]GstBaseSrc, blocksize: guint) void;
+pub extern fn gst_base_src_get_blocksize(src: [*c]GstBaseSrc) guint;
+pub extern fn gst_base_src_set_do_timestamp(src: [*c]GstBaseSrc, timestamp: gboolean) void;
+pub extern fn gst_base_src_get_do_timestamp(src: [*c]GstBaseSrc) gboolean;
+pub extern fn gst_base_src_new_seamless_segment(src: [*c]GstBaseSrc, start: gint64, stop: gint64, time: gint64) gboolean;
+pub extern fn gst_base_src_new_segment(src: [*c]GstBaseSrc, segment: [*c]const GstSegment) gboolean;
+pub extern fn gst_base_src_set_caps(src: [*c]GstBaseSrc, caps: [*c]GstCaps) gboolean;
+pub extern fn gst_base_src_get_buffer_pool(src: [*c]GstBaseSrc) [*c]GstBufferPool;
+pub extern fn gst_base_src_get_allocator(src: [*c]GstBaseSrc, allocator: [*c][*c]GstAllocator, params: [*c]GstAllocationParams) void;
+pub extern fn gst_base_src_submit_buffer_list(src: [*c]GstBaseSrc, buffer_list: ?*GstBufferList) void;
+pub const GstBaseSrc_autoptr = [*c]GstBaseSrc;
+pub const GstBaseSrc_listautoptr = [*c]GList;
+pub const GstBaseSrc_slistautoptr = [*c]GSList;
+pub const GstBaseSrc_queueautoptr = [*c]GQueue;
+pub fn glib_autoptr_clear_GstBaseSrc(arg__ptr: [*c]GstBaseSrc) callconv(.C) void {
+    var _ptr = arg__ptr;
+    if (_ptr != null) {
+        gst_object_unref(@ptrCast(gpointer, _ptr));
+    }
+}
+pub fn glib_autoptr_cleanup_GstBaseSrc(arg__ptr: [*c][*c]GstBaseSrc) callconv(.C) void {
+    var _ptr = arg__ptr;
+    glib_autoptr_clear_GstBaseSrc(_ptr.*);
+}
+pub fn glib_listautoptr_cleanup_GstBaseSrc(arg__l: [*c][*c]GList) callconv(.C) void {
+    var _l = arg__l;
+    g_list_free_full(_l.*, @ptrCast(GDestroyNotify, @alignCast(@import("std").meta.alignment(GDestroyNotify), @ptrCast(?fn () callconv(.C) void, @alignCast(@import("std").meta.alignment(?fn () callconv(.C) void), gst_object_unref)))));
+}
+pub fn glib_slistautoptr_cleanup_GstBaseSrc(arg__l: [*c][*c]GSList) callconv(.C) void {
+    var _l = arg__l;
+    g_slist_free_full(_l.*, @ptrCast(GDestroyNotify, @alignCast(@import("std").meta.alignment(GDestroyNotify), @ptrCast(?fn () callconv(.C) void, @alignCast(@import("std").meta.alignment(?fn () callconv(.C) void), gst_object_unref)))));
+}
+pub fn glib_queueautoptr_cleanup_GstBaseSrc(arg__q: [*c][*c]GQueue) callconv(.C) void {
+    var _q = arg__q;
+    if (_q.* != null) {
+        g_queue_free_full(_q.*, @ptrCast(GDestroyNotify, @alignCast(@import("std").meta.alignment(GDestroyNotify), @ptrCast(?fn () callconv(.C) void, @alignCast(@import("std").meta.alignment(?fn () callconv(.C) void), gst_object_unref)))));
+    }
+}
+pub const struct__GstPushSrc = extern struct {
+    parent: GstBaseSrc,
+    _gst_reserved: [4]gpointer,
+};
+pub const GstPushSrc = struct__GstPushSrc;
+pub const struct__GstPushSrcClass = extern struct {
+    parent_class: GstBaseSrcClass,
+    create: ?fn ([*c]GstPushSrc, [*c][*c]GstBuffer) callconv(.C) GstFlowReturn,
+    alloc: ?fn ([*c]GstPushSrc, [*c][*c]GstBuffer) callconv(.C) GstFlowReturn,
+    fill: ?fn ([*c]GstPushSrc, [*c]GstBuffer) callconv(.C) GstFlowReturn,
+    _gst_reserved: [4]gpointer,
+};
+pub const GstPushSrcClass = struct__GstPushSrcClass;
+pub extern fn gst_push_src_get_type() GType;
+pub const GstPushSrc_autoptr = [*c]GstPushSrc;
+pub const GstPushSrc_listautoptr = [*c]GList;
+pub const GstPushSrc_slistautoptr = [*c]GSList;
+pub const GstPushSrc_queueautoptr = [*c]GQueue;
+pub fn glib_autoptr_clear_GstPushSrc(arg__ptr: [*c]GstPushSrc) callconv(.C) void {
+    var _ptr = arg__ptr;
+    if (_ptr != null) {
+        gst_object_unref(@ptrCast(gpointer, _ptr));
+    }
+}
+pub fn glib_autoptr_cleanup_GstPushSrc(arg__ptr: [*c][*c]GstPushSrc) callconv(.C) void {
+    var _ptr = arg__ptr;
+    glib_autoptr_clear_GstPushSrc(_ptr.*);
+}
+pub fn glib_listautoptr_cleanup_GstPushSrc(arg__l: [*c][*c]GList) callconv(.C) void {
+    var _l = arg__l;
+    g_list_free_full(_l.*, @ptrCast(GDestroyNotify, @alignCast(@import("std").meta.alignment(GDestroyNotify), @ptrCast(?fn () callconv(.C) void, @alignCast(@import("std").meta.alignment(?fn () callconv(.C) void), gst_object_unref)))));
+}
+pub fn glib_slistautoptr_cleanup_GstPushSrc(arg__l: [*c][*c]GSList) callconv(.C) void {
+    var _l = arg__l;
+    g_slist_free_full(_l.*, @ptrCast(GDestroyNotify, @alignCast(@import("std").meta.alignment(GDestroyNotify), @ptrCast(?fn () callconv(.C) void, @alignCast(@import("std").meta.alignment(?fn () callconv(.C) void), gst_object_unref)))));
+}
+pub fn glib_queueautoptr_cleanup_GstPushSrc(arg__q: [*c][*c]GQueue) callconv(.C) void {
+    var _q = arg__q;
+    if (_q.* != null) {
+        g_queue_free_full(_q.*, @ptrCast(GDestroyNotify, @alignCast(@import("std").meta.alignment(GDestroyNotify), @ptrCast(?fn () callconv(.C) void, @alignCast(@import("std").meta.alignment(?fn () callconv(.C) void), gst_object_unref)))));
+    }
+}
+pub extern fn gst_app_stream_type_get_type() GType;
+pub extern fn gst_app_leaky_type_get_type() GType;
+pub const struct__GstAppSrcPrivate = opaque {};
+pub const GstAppSrcPrivate = struct__GstAppSrcPrivate;
+pub const struct__GstAppSrc = extern struct {
+    basesrc: GstBaseSrc,
+    priv: ?*GstAppSrcPrivate,
+    _gst_reserved: [4]gpointer,
+};
+pub const GstAppSrc = struct__GstAppSrc;
+pub const struct__GstAppSrcClass = extern struct {
+    basesrc_class: GstBaseSrcClass,
+    need_data: ?fn ([*c]GstAppSrc, guint) callconv(.C) void,
+    enough_data: ?fn ([*c]GstAppSrc) callconv(.C) void,
+    seek_data: ?fn ([*c]GstAppSrc, guint64) callconv(.C) gboolean,
+    push_buffer: ?fn ([*c]GstAppSrc, [*c]GstBuffer) callconv(.C) GstFlowReturn,
+    end_of_stream: ?fn ([*c]GstAppSrc) callconv(.C) GstFlowReturn,
+    push_sample: ?fn ([*c]GstAppSrc, ?*GstSample) callconv(.C) GstFlowReturn,
+    push_buffer_list: ?fn ([*c]GstAppSrc, ?*GstBufferList) callconv(.C) GstFlowReturn,
+    _gst_reserved: [2]gpointer,
+};
+pub const GstAppSrcClass = struct__GstAppSrcClass;
+pub const GstAppSrcCallbacks = extern struct {
+    need_data: ?fn ([*c]GstAppSrc, guint, gpointer) callconv(.C) void,
+    enough_data: ?fn ([*c]GstAppSrc, gpointer) callconv(.C) void,
+    seek_data: ?fn ([*c]GstAppSrc, guint64, gpointer) callconv(.C) gboolean,
+    _gst_reserved: [4]gpointer,
+};
+pub const GST_APP_STREAM_TYPE_STREAM: c_int = 0;
+pub const GST_APP_STREAM_TYPE_SEEKABLE: c_int = 1;
+pub const GST_APP_STREAM_TYPE_RANDOM_ACCESS: c_int = 2;
+pub const GstAppStreamType = c_uint;
+pub const GST_APP_LEAKY_TYPE_NONE: c_int = 0;
+pub const GST_APP_LEAKY_TYPE_UPSTREAM: c_int = 1;
+pub const GST_APP_LEAKY_TYPE_DOWNSTREAM: c_int = 2;
+pub const GstAppLeakyType = c_uint;
+pub extern fn gst_app_src_get_type() GType;
+pub extern fn gst_app_src_set_caps(appsrc: [*c]GstAppSrc, caps: [*c]const GstCaps) void;
+pub extern fn gst_app_src_get_caps(appsrc: [*c]GstAppSrc) [*c]GstCaps;
+pub extern fn gst_app_src_set_size(appsrc: [*c]GstAppSrc, size: gint64) void;
+pub extern fn gst_app_src_get_size(appsrc: [*c]GstAppSrc) gint64;
+pub extern fn gst_app_src_set_duration(appsrc: [*c]GstAppSrc, duration: GstClockTime) void;
+pub extern fn gst_app_src_get_duration(appsrc: [*c]GstAppSrc) GstClockTime;
+pub extern fn gst_app_src_set_stream_type(appsrc: [*c]GstAppSrc, @"type": GstAppStreamType) void;
+pub extern fn gst_app_src_get_stream_type(appsrc: [*c]GstAppSrc) GstAppStreamType;
+pub extern fn gst_app_src_set_max_bytes(appsrc: [*c]GstAppSrc, max: guint64) void;
+pub extern fn gst_app_src_get_max_bytes(appsrc: [*c]GstAppSrc) guint64;
+pub extern fn gst_app_src_get_current_level_bytes(appsrc: [*c]GstAppSrc) guint64;
+pub extern fn gst_app_src_set_max_buffers(appsrc: [*c]GstAppSrc, max: guint64) void;
+pub extern fn gst_app_src_get_max_buffers(appsrc: [*c]GstAppSrc) guint64;
+pub extern fn gst_app_src_get_current_level_buffers(appsrc: [*c]GstAppSrc) guint64;
+pub extern fn gst_app_src_set_max_time(appsrc: [*c]GstAppSrc, max: GstClockTime) void;
+pub extern fn gst_app_src_get_max_time(appsrc: [*c]GstAppSrc) GstClockTime;
+pub extern fn gst_app_src_get_current_level_time(appsrc: [*c]GstAppSrc) GstClockTime;
+pub extern fn gst_app_src_set_leaky_type(appsrc: [*c]GstAppSrc, leaky: GstAppLeakyType) void;
+pub extern fn gst_app_src_get_leaky_type(appsrc: [*c]GstAppSrc) GstAppLeakyType;
+pub extern fn gst_app_src_set_latency(appsrc: [*c]GstAppSrc, min: guint64, max: guint64) void;
+pub extern fn gst_app_src_get_latency(appsrc: [*c]GstAppSrc, min: [*c]guint64, max: [*c]guint64) void;
+pub extern fn gst_app_src_set_emit_signals(appsrc: [*c]GstAppSrc, emit: gboolean) void;
+pub extern fn gst_app_src_get_emit_signals(appsrc: [*c]GstAppSrc) gboolean;
+pub extern fn gst_app_src_push_buffer(appsrc: [*c]GstAppSrc, buffer: [*c]GstBuffer) GstFlowReturn;
+pub extern fn gst_app_src_push_buffer_list(appsrc: [*c]GstAppSrc, buffer_list: ?*GstBufferList) GstFlowReturn;
+pub extern fn gst_app_src_end_of_stream(appsrc: [*c]GstAppSrc) GstFlowReturn;
+pub extern fn gst_app_src_push_sample(appsrc: [*c]GstAppSrc, sample: ?*GstSample) GstFlowReturn;
+pub extern fn gst_app_src_set_callbacks(appsrc: [*c]GstAppSrc, callbacks: [*c]GstAppSrcCallbacks, user_data: gpointer, notify: GDestroyNotify) void;
+pub const GstAppSrc_autoptr = [*c]GstAppSrc;
+pub const GstAppSrc_listautoptr = [*c]GList;
+pub const GstAppSrc_slistautoptr = [*c]GSList;
+pub const GstAppSrc_queueautoptr = [*c]GQueue;
+pub fn glib_autoptr_clear_GstAppSrc(arg__ptr: [*c]GstAppSrc) callconv(.C) void {
+    var _ptr = arg__ptr;
+    if (_ptr != null) {
+        gst_object_unref(@ptrCast(gpointer, _ptr));
+    }
+}
+pub fn glib_autoptr_cleanup_GstAppSrc(arg__ptr: [*c][*c]GstAppSrc) callconv(.C) void {
+    var _ptr = arg__ptr;
+    glib_autoptr_clear_GstAppSrc(_ptr.*);
+}
+pub fn glib_listautoptr_cleanup_GstAppSrc(arg__l: [*c][*c]GList) callconv(.C) void {
+    var _l = arg__l;
+    g_list_free_full(_l.*, @ptrCast(GDestroyNotify, @alignCast(@import("std").meta.alignment(GDestroyNotify), @ptrCast(?fn () callconv(.C) void, @alignCast(@import("std").meta.alignment(?fn () callconv(.C) void), gst_object_unref)))));
+}
+pub fn glib_slistautoptr_cleanup_GstAppSrc(arg__l: [*c][*c]GSList) callconv(.C) void {
+    var _l = arg__l;
+    g_slist_free_full(_l.*, @ptrCast(GDestroyNotify, @alignCast(@import("std").meta.alignment(GDestroyNotify), @ptrCast(?fn () callconv(.C) void, @alignCast(@import("std").meta.alignment(?fn () callconv(.C) void), gst_object_unref)))));
+}
+pub fn glib_queueautoptr_cleanup_GstAppSrc(arg__q: [*c][*c]GQueue) callconv(.C) void {
+    var _q = arg__q;
+    if (_q.* != null) {
+        g_queue_free_full(_q.*, @ptrCast(GDestroyNotify, @alignCast(@import("std").meta.alignment(GDestroyNotify), @ptrCast(?fn () callconv(.C) void, @alignCast(@import("std").meta.alignment(?fn () callconv(.C) void), gst_object_unref)))));
+    }
+}
+pub const struct__GstBaseSinkPrivate = opaque {};
+pub const GstBaseSinkPrivate = struct__GstBaseSinkPrivate;
+pub const struct__GstBaseSink = extern struct {
+    element: GstElement,
+    sinkpad: ?*GstPad,
+    pad_mode: GstPadMode,
+    offset: guint64,
+    can_activate_pull: gboolean,
+    can_activate_push: gboolean,
+    preroll_lock: GMutex,
+    preroll_cond: GCond,
+    eos: gboolean,
+    need_preroll: gboolean,
+    have_preroll: gboolean,
+    playing_async: gboolean,
+    have_newsegment: gboolean,
+    segment: GstSegment,
+    clock_id: GstClockID,
+    sync: gboolean,
+    flushing: gboolean,
+    running: gboolean,
+    max_lateness: gint64,
+    priv: ?*GstBaseSinkPrivate,
+    _gst_reserved: [20]gpointer,
+};
+pub const GstBaseSink = struct__GstBaseSink;
+pub const struct__GstBaseSinkClass = extern struct {
+    parent_class: GstElementClass,
+    get_caps: ?fn ([*c]GstBaseSink, [*c]GstCaps) callconv(.C) [*c]GstCaps,
+    set_caps: ?fn ([*c]GstBaseSink, [*c]GstCaps) callconv(.C) gboolean,
+    fixate: ?fn ([*c]GstBaseSink, [*c]GstCaps) callconv(.C) [*c]GstCaps,
+    activate_pull: ?fn ([*c]GstBaseSink, gboolean) callconv(.C) gboolean,
+    get_times: ?fn ([*c]GstBaseSink, [*c]GstBuffer, [*c]GstClockTime, [*c]GstClockTime) callconv(.C) void,
+    propose_allocation: ?fn ([*c]GstBaseSink, [*c]GstQuery) callconv(.C) gboolean,
+    start: ?fn ([*c]GstBaseSink) callconv(.C) gboolean,
+    stop: ?fn ([*c]GstBaseSink) callconv(.C) gboolean,
+    unlock: ?fn ([*c]GstBaseSink) callconv(.C) gboolean,
+    unlock_stop: ?fn ([*c]GstBaseSink) callconv(.C) gboolean,
+    query: ?fn ([*c]GstBaseSink, [*c]GstQuery) callconv(.C) gboolean,
+    event: ?fn ([*c]GstBaseSink, [*c]GstEvent) callconv(.C) gboolean,
+    wait_event: ?fn ([*c]GstBaseSink, [*c]GstEvent) callconv(.C) GstFlowReturn,
+    prepare: ?fn ([*c]GstBaseSink, [*c]GstBuffer) callconv(.C) GstFlowReturn,
+    prepare_list: ?fn ([*c]GstBaseSink, ?*GstBufferList) callconv(.C) GstFlowReturn,
+    preroll: ?fn ([*c]GstBaseSink, [*c]GstBuffer) callconv(.C) GstFlowReturn,
+    render: ?fn ([*c]GstBaseSink, [*c]GstBuffer) callconv(.C) GstFlowReturn,
+    render_list: ?fn ([*c]GstBaseSink, ?*GstBufferList) callconv(.C) GstFlowReturn,
+    _gst_reserved: [20]gpointer,
+};
+pub const GstBaseSinkClass = struct__GstBaseSinkClass;
+pub extern fn gst_base_sink_get_type() GType;
+pub extern fn gst_base_sink_do_preroll(sink: [*c]GstBaseSink, obj: [*c]GstMiniObject) GstFlowReturn;
+pub extern fn gst_base_sink_wait_preroll(sink: [*c]GstBaseSink) GstFlowReturn;
+pub extern fn gst_base_sink_set_sync(sink: [*c]GstBaseSink, sync: gboolean) void;
+pub extern fn gst_base_sink_get_sync(sink: [*c]GstBaseSink) gboolean;
+pub extern fn gst_base_sink_set_drop_out_of_segment(sink: [*c]GstBaseSink, drop_out_of_segment: gboolean) void;
+pub extern fn gst_base_sink_get_drop_out_of_segment(sink: [*c]GstBaseSink) gboolean;
+pub extern fn gst_base_sink_set_max_lateness(sink: [*c]GstBaseSink, max_lateness: gint64) void;
+pub extern fn gst_base_sink_get_max_lateness(sink: [*c]GstBaseSink) gint64;
+pub extern fn gst_base_sink_set_qos_enabled(sink: [*c]GstBaseSink, enabled: gboolean) void;
+pub extern fn gst_base_sink_is_qos_enabled(sink: [*c]GstBaseSink) gboolean;
+pub extern fn gst_base_sink_set_async_enabled(sink: [*c]GstBaseSink, enabled: gboolean) void;
+pub extern fn gst_base_sink_is_async_enabled(sink: [*c]GstBaseSink) gboolean;
+pub extern fn gst_base_sink_set_ts_offset(sink: [*c]GstBaseSink, offset: GstClockTimeDiff) void;
+pub extern fn gst_base_sink_get_ts_offset(sink: [*c]GstBaseSink) GstClockTimeDiff;
+pub extern fn gst_base_sink_get_last_sample(sink: [*c]GstBaseSink) ?*GstSample;
+pub extern fn gst_base_sink_set_last_sample_enabled(sink: [*c]GstBaseSink, enabled: gboolean) void;
+pub extern fn gst_base_sink_is_last_sample_enabled(sink: [*c]GstBaseSink) gboolean;
+pub extern fn gst_base_sink_query_latency(sink: [*c]GstBaseSink, live: [*c]gboolean, upstream_live: [*c]gboolean, min_latency: [*c]GstClockTime, max_latency: [*c]GstClockTime) gboolean;
+pub extern fn gst_base_sink_get_latency(sink: [*c]GstBaseSink) GstClockTime;
+pub extern fn gst_base_sink_set_render_delay(sink: [*c]GstBaseSink, delay: GstClockTime) void;
+pub extern fn gst_base_sink_get_render_delay(sink: [*c]GstBaseSink) GstClockTime;
+pub extern fn gst_base_sink_set_blocksize(sink: [*c]GstBaseSink, blocksize: guint) void;
+pub extern fn gst_base_sink_get_blocksize(sink: [*c]GstBaseSink) guint;
+pub extern fn gst_base_sink_set_throttle_time(sink: [*c]GstBaseSink, throttle: guint64) void;
+pub extern fn gst_base_sink_get_throttle_time(sink: [*c]GstBaseSink) guint64;
+pub extern fn gst_base_sink_set_max_bitrate(sink: [*c]GstBaseSink, max_bitrate: guint64) void;
+pub extern fn gst_base_sink_get_max_bitrate(sink: [*c]GstBaseSink) guint64;
+pub extern fn gst_base_sink_set_processing_deadline(sink: [*c]GstBaseSink, processing_deadline: GstClockTime) void;
+pub extern fn gst_base_sink_get_processing_deadline(sink: [*c]GstBaseSink) GstClockTime;
+pub extern fn gst_base_sink_wait_clock(sink: [*c]GstBaseSink, time: GstClockTime, jitter: [*c]GstClockTimeDiff) GstClockReturn;
+pub extern fn gst_base_sink_wait(sink: [*c]GstBaseSink, time: GstClockTime, jitter: [*c]GstClockTimeDiff) GstFlowReturn;
+pub extern fn gst_base_sink_get_stats(sink: [*c]GstBaseSink) [*c]GstStructure;
+pub const GstBaseSink_autoptr = [*c]GstBaseSink;
+pub const GstBaseSink_listautoptr = [*c]GList;
+pub const GstBaseSink_slistautoptr = [*c]GSList;
+pub const GstBaseSink_queueautoptr = [*c]GQueue;
+pub fn glib_autoptr_clear_GstBaseSink(arg__ptr: [*c]GstBaseSink) callconv(.C) void {
+    var _ptr = arg__ptr;
+    if (_ptr != null) {
+        gst_object_unref(@ptrCast(gpointer, _ptr));
+    }
+}
+pub fn glib_autoptr_cleanup_GstBaseSink(arg__ptr: [*c][*c]GstBaseSink) callconv(.C) void {
+    var _ptr = arg__ptr;
+    glib_autoptr_clear_GstBaseSink(_ptr.*);
+}
+pub fn glib_listautoptr_cleanup_GstBaseSink(arg__l: [*c][*c]GList) callconv(.C) void {
+    var _l = arg__l;
+    g_list_free_full(_l.*, @ptrCast(GDestroyNotify, @alignCast(@import("std").meta.alignment(GDestroyNotify), @ptrCast(?fn () callconv(.C) void, @alignCast(@import("std").meta.alignment(?fn () callconv(.C) void), gst_object_unref)))));
+}
+pub fn glib_slistautoptr_cleanup_GstBaseSink(arg__l: [*c][*c]GSList) callconv(.C) void {
+    var _l = arg__l;
+    g_slist_free_full(_l.*, @ptrCast(GDestroyNotify, @alignCast(@import("std").meta.alignment(GDestroyNotify), @ptrCast(?fn () callconv(.C) void, @alignCast(@import("std").meta.alignment(?fn () callconv(.C) void), gst_object_unref)))));
+}
+pub fn glib_queueautoptr_cleanup_GstBaseSink(arg__q: [*c][*c]GQueue) callconv(.C) void {
+    var _q = arg__q;
+    if (_q.* != null) {
+        g_queue_free_full(_q.*, @ptrCast(GDestroyNotify, @alignCast(@import("std").meta.alignment(GDestroyNotify), @ptrCast(?fn () callconv(.C) void, @alignCast(@import("std").meta.alignment(?fn () callconv(.C) void), gst_object_unref)))));
+    }
+}
+pub const struct__GstAppSinkPrivate = opaque {};
+pub const GstAppSinkPrivate = struct__GstAppSinkPrivate;
+pub const struct__GstAppSink = extern struct {
+    basesink: GstBaseSink,
+    priv: ?*GstAppSinkPrivate,
+    _gst_reserved: [4]gpointer,
+};
+pub const GstAppSink = struct__GstAppSink;
+pub const struct__GstAppSinkClass = extern struct {
+    basesink_class: GstBaseSinkClass,
+    eos: ?fn ([*c]GstAppSink) callconv(.C) void,
+    new_preroll: ?fn ([*c]GstAppSink) callconv(.C) GstFlowReturn,
+    new_sample: ?fn ([*c]GstAppSink) callconv(.C) GstFlowReturn,
+    pull_preroll: ?fn ([*c]GstAppSink) callconv(.C) ?*GstSample,
+    pull_sample: ?fn ([*c]GstAppSink) callconv(.C) ?*GstSample,
+    try_pull_preroll: ?fn ([*c]GstAppSink, GstClockTime) callconv(.C) ?*GstSample,
+    try_pull_sample: ?fn ([*c]GstAppSink, GstClockTime) callconv(.C) ?*GstSample,
+    try_pull_object: ?fn ([*c]GstAppSink, GstClockTime) callconv(.C) [*c]GstMiniObject,
+    _gst_reserved: [1]gpointer,
+};
+pub const GstAppSinkClass = struct__GstAppSinkClass;
+pub const GstAppSinkCallbacks = extern struct {
+    eos: ?fn ([*c]GstAppSink, gpointer) callconv(.C) void,
+    new_preroll: ?fn (*GstAppSink, gpointer) callconv(.C) GstFlowReturn,
+    new_sample: ?fn (*GstAppSink, gpointer) callconv(.C) GstFlowReturn,
+    new_event: ?fn (*GstAppSink, gpointer) callconv(.C) gboolean,
+    _gst_reserved: [3]gpointer,
+};
+pub extern fn gst_app_sink_get_type() GType;
+pub extern fn gst_app_sink_set_caps(appsink: [*c]GstAppSink, caps: [*c]const GstCaps) void;
+pub extern fn gst_app_sink_get_caps(appsink: [*c]GstAppSink) [*c]GstCaps;
+pub extern fn gst_app_sink_is_eos(appsink: [*c]GstAppSink) gboolean;
+pub extern fn gst_app_sink_set_emit_signals(appsink: [*c]GstAppSink, emit: gboolean) void;
+pub extern fn gst_app_sink_get_emit_signals(appsink: [*c]GstAppSink) gboolean;
+pub extern fn gst_app_sink_set_max_buffers(appsink: [*c]GstAppSink, max: guint) void;
+pub extern fn gst_app_sink_get_max_buffers(appsink: [*c]GstAppSink) guint;
+pub extern fn gst_app_sink_set_drop(appsink: [*c]GstAppSink, drop: gboolean) void;
+pub extern fn gst_app_sink_get_drop(appsink: [*c]GstAppSink) gboolean;
+pub extern fn gst_app_sink_set_buffer_list_support(appsink: [*c]GstAppSink, enable_lists: gboolean) void;
+pub extern fn gst_app_sink_get_buffer_list_support(appsink: [*c]GstAppSink) gboolean;
+pub extern fn gst_app_sink_set_wait_on_eos(appsink: [*c]GstAppSink, wait: gboolean) void;
+pub extern fn gst_app_sink_get_wait_on_eos(appsink: [*c]GstAppSink) gboolean;
+pub extern fn gst_app_sink_pull_preroll(appsink: [*c]GstAppSink) ?*GstSample;
+pub extern fn gst_app_sink_pull_sample(appsink: [*c]GstAppSink) ?*GstSample;
+pub extern fn gst_app_sink_pull_object(appsink: [*c]GstAppSink) [*c]GstMiniObject;
+pub extern fn gst_app_sink_try_pull_preroll(appsink: [*c]GstAppSink, timeout: GstClockTime) ?*GstSample;
+pub extern fn gst_app_sink_try_pull_sample(appsink: [*c]GstAppSink, timeout: GstClockTime) ?*GstSample;
+pub extern fn gst_app_sink_try_pull_object(appsink: [*c]GstAppSink, timeout: GstClockTime) [*c]GstMiniObject;
+pub extern fn gst_app_sink_set_callbacks(appsink: [*c]GstAppSink, callbacks: [*c]GstAppSinkCallbacks, user_data: gpointer, notify: GDestroyNotify) void;
+pub const GstAppSink_autoptr = [*c]GstAppSink;
+pub const GstAppSink_listautoptr = [*c]GList;
+pub const GstAppSink_slistautoptr = [*c]GSList;
+pub const GstAppSink_queueautoptr = [*c]GQueue;
+pub fn glib_autoptr_clear_GstAppSink(arg__ptr: [*c]GstAppSink) callconv(.C) void {
+    var _ptr = arg__ptr;
+    if (_ptr != null) {
+        gst_object_unref(@ptrCast(gpointer, _ptr));
+    }
+}
+pub fn glib_autoptr_cleanup_GstAppSink(arg__ptr: [*c][*c]GstAppSink) callconv(.C) void {
+    var _ptr = arg__ptr;
+    glib_autoptr_clear_GstAppSink(_ptr.*);
+}
+pub fn glib_listautoptr_cleanup_GstAppSink(arg__l: [*c][*c]GList) callconv(.C) void {
+    var _l = arg__l;
+    g_list_free_full(_l.*, @ptrCast(GDestroyNotify, @alignCast(@import("std").meta.alignment(GDestroyNotify), @ptrCast(?fn () callconv(.C) void, @alignCast(@import("std").meta.alignment(?fn () callconv(.C) void), gst_object_unref)))));
+}
+pub fn glib_slistautoptr_cleanup_GstAppSink(arg__l: [*c][*c]GSList) callconv(.C) void {
+    var _l = arg__l;
+    g_slist_free_full(_l.*, @ptrCast(GDestroyNotify, @alignCast(@import("std").meta.alignment(GDestroyNotify), @ptrCast(?fn () callconv(.C) void, @alignCast(@import("std").meta.alignment(?fn () callconv(.C) void), gst_object_unref)))));
+}
+pub fn glib_queueautoptr_cleanup_GstAppSink(arg__q: [*c][*c]GQueue) callconv(.C) void {
+    var _q = arg__q;
+    if (_q.* != null) {
+        g_queue_free_full(_q.*, @ptrCast(GDestroyNotify, @alignCast(@import("std").meta.alignment(GDestroyNotify), @ptrCast(?fn () callconv(.C) void, @alignCast(@import("std").meta.alignment(?fn () callconv(.C) void), gst_object_unref)))));
+    }
+}
 pub const __INTMAX_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `L`"); // (no file):80:9
 pub const __UINTMAX_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `UL`"); // (no file):86:9
 pub const __FLT16_DENORM_MIN__ = @compileError("unable to translate C expr: unexpected token 'IntegerLiteral'"); // (no file):109:9
@@ -13356,6 +13781,8 @@ pub const __GLIBC_MINOR__ = @as(c_int, 19);
 pub const _DEBUG = @as(c_int, 1);
 pub const __sched_priority = @as(c_int, 1);
 pub const __GCC_HAVE_DWARF2_CFI_ASM = @as(c_int, 1);
+pub const __GST_APP_H__ = "";
+pub const _GST_APP_SRC_H_ = "";
 pub const __GST_H__ = "";
 pub const __G_LIB_H__ = "";
 pub const __GLIB_H_INSIDE__ = "";
@@ -18962,3 +19389,17 @@ pub const _GstTypeFind = struct__GstTypeFind;
 pub const _GstTypeFindFactory = struct__GstTypeFindFactory;
 pub const _GstTypeFindFactoryClass = struct__GstTypeFindFactoryClass;
 pub const _GstParseContext = struct__GstParseContext;
+pub const _GstBaseSrcPrivate = struct__GstBaseSrcPrivate;
+pub const _GstBaseSrc = struct__GstBaseSrc;
+pub const _GstBaseSrcClass = struct__GstBaseSrcClass;
+pub const _GstPushSrc = struct__GstPushSrc;
+pub const _GstPushSrcClass = struct__GstPushSrcClass;
+pub const _GstAppSrcPrivate = struct__GstAppSrcPrivate;
+pub const _GstAppSrc = struct__GstAppSrc;
+pub const _GstAppSrcClass = struct__GstAppSrcClass;
+pub const _GstBaseSinkPrivate = struct__GstBaseSinkPrivate;
+pub const _GstBaseSink = struct__GstBaseSink;
+pub const _GstBaseSinkClass = struct__GstBaseSinkClass;
+pub const _GstAppSinkPrivate = struct__GstAppSinkPrivate;
+pub const _GstAppSink = struct__GstAppSink;
+pub const _GstAppSinkClass = struct__GstAppSinkClass;
