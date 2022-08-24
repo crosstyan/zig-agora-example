@@ -57,17 +57,10 @@ fn new_sample_cb(appsink: *gst.GstAppSink, user_data: ?*anyopaque) callconv(.C) 
     return gst.GST_FLOW_OK;
 }
 
-const AppConfig = struct {
-    cert_path: []const u8,
-    app_id: []const u8,
-    channel_name: []const u8,
-    app_token: []const u8,
-    log_path: []const u8,
-    uid: u32
-};
+const AppConfig = struct { cert_path: []const u8, app_id: []const u8, channel_name: []const u8, app_token: []const u8, log_path: []const u8, uid: u32 };
 
 // default 0 sentinel
-fn toOwnedSentinel(comptime T:type, allocator: Allocator, from: []const T) ![*:0]const T {
+fn toOwnedSentinel(comptime T: type, allocator: Allocator, from: []const T) ![*:0]const T {
     var array_list = std.ArrayList(u8).init(allocator);
     try array_list.appendSlice(from);
     var slice_sentinel = try array_list.toOwnedSliceSentinel(0);
@@ -80,7 +73,7 @@ pub fn main() !void {
     const config_name = "agora-zig.json";
     const local_config_path = (try known.getPath(allocator, known.KnownFolder.local_configuration)) orelse unreachable;
     defer allocator.free(local_config_path);
-    const config_path = try std.fs.path.join(allocator, &.{local_config_path, config_name});
+    const config_path = try std.fs.path.join(allocator, &.{ local_config_path, config_name });
     defer allocator.free(config_path);
     log.info("Try to read config path in {s}", .{config_path});
     const config_file = std.fs.openFileAbsolute(config_path, std.fs.File.OpenFlags{ .mode = File.OpenMode.read_only }) catch |err| {
@@ -91,9 +84,9 @@ pub fn main() !void {
                 // https://ziglearn.org/chapter-2/#json
                 const home_path = (try known.getPath(allocator, known.KnownFolder.home)) orelse unreachable;
                 defer allocator.free(home_path);
-                const cert_path_default = try std.fs.path.join(allocator, &.{home_path, "certificate.bin"});
+                const cert_path_default = try std.fs.path.join(allocator, &.{ home_path, "certificate.bin" });
                 defer allocator.free(cert_path_default);
-                const default_config = AppConfig {
+                const default_config = AppConfig{
                     .cert_path = cert_path_default,
                     .app_id = "",
                     .channel_name = "test",
@@ -104,20 +97,13 @@ pub fn main() !void {
                 var str = std.ArrayList(u8).init(allocator);
                 defer str.deinit();
                 try std.json.stringify(default_config, .{}, str.writer());
-                const fmt = 
+                const fmt =
                     \\I Can't find config at {s} and I have created a default one for you. 
                     \\Please fill your app id and token. 
                     \\I will throw a error now.
                 ;
-                const dir = try std.fs.openDirAbsolute(local_config_path, std.fs.Dir.OpenDirOptions{.access_sub_paths = false, .no_follow = true});
-                const flags = std.fs.File.CreateFlags {
-                    .read = true,
-                    .truncate = true,
-                    .lock = std.fs.File.Lock.Exclusive,
-                    .lock_nonblocking = true,
-                    .mode = undefined,
-                    .intended_io_mode = undefined
-                };
+                const dir = try std.fs.openDirAbsolute(local_config_path, std.fs.Dir.OpenDirOptions{ .access_sub_paths = false, .no_follow = true });
+                const flags = std.fs.File.CreateFlags{ .read = true, .truncate = true, .lock = std.fs.File.Lock.Exclusive, .lock_nonblocking = true, .mode = undefined, .intended_io_mode = undefined };
                 const file = try dir.createFile(config_name, flags);
                 _ = try file.write(str.toOwnedSlice());
                 log.err(fmt, .{config_path});
@@ -126,16 +112,15 @@ pub fn main() !void {
             },
             else => {
                 return err;
-            }
+            },
         }
-
     };
     defer config_file.close();
     const config_raw = try config_file.readToEndAlloc(allocator, 5120);
     defer allocator.free(config_raw);
     std.io.getStdOut().writer().print("Config Dump:\n{s}\n", .{config_raw}) catch unreachable;
     var token_stream = std.json.TokenStream.init(config_raw);
-    const config: AppConfig = try std.json.parse(AppConfig, &token_stream, .{.allocator = allocator, .ignore_unknown_fields = false});
+    const config: AppConfig = try std.json.parse(AppConfig, &token_stream, .{ .allocator = allocator, .ignore_unknown_fields = false });
 
     // https://www.huy.rocks/everyday/01-04-2022-zig-strings-in-5-minutes
     const app_id = try toOwnedSentinel(u8, allocator, config.app_id);
