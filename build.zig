@@ -41,9 +41,10 @@ pub fn build(b: *Builder) !void {
         const p = try std.fs.path.join(b.allocator, &.{b.build_root, header_rpath});
         std.log.info("header bindings is in `{s}`.", .{p});
     }
-    const zig_toml = Pkg {
-        .name = "toml",
-        .source = .{ .path = "libs/zig-toml/src/toml.zig"},
+
+    const known_folders = Pkg {
+        .name = "known",
+        .source = .{ .path = "libs/known-folders/known-folders.zig"},
         .dependencies = null
     };
 
@@ -53,7 +54,7 @@ pub fn build(b: *Builder) !void {
     exe.addIncludePath("agora_sdk/include");
     // change this to x86_64 if you're using x86 machine
     exe.addLibraryPath(lib_path);
-    exe.addPackage(zig_toml);
+    exe.addPackage(known_folders);
     exe.linkLibC();
     // IT IS DASH NOT UNDERSCORE! FUCK IT!
     exe.linkSystemLibraryName("agora-rtc-sdk");

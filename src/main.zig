@@ -3,7 +3,7 @@
 const agora = @import("bindings/agora.zig");
 const gst = @import("bindings/gst.zig");
 const std = @import("std");
-const toml = @import("toml");
+const known = @import("known");
 const defaultHandler = @import("handlers.zig");
 const log = std.log;
 const File = std.fs.File;
@@ -57,7 +57,69 @@ fn new_sample_cb(appsink: *gst.GstAppSink, user_data: ?*anyopaque) callconv(.C) 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const allocator: std.mem.Allocator = gpa.allocator();
 
+const AppConfig = struct {
+    cert_path: []const u8,
+    app_id: []const u8,
+    channel_name: []const u8,
+    app_token: []const u8,
+    log_path: []const u8,
+    uid: u32
+};
+
 pub fn main() !void {
+    const config_name = "agora-zig.json";
+    const local_config_path = (try known.getPath(allocator, known.KnownFolder.local_configuration)) orelse unreachable;
+    defer allocator.free(local_config_path);
+    const config_path = try std.fs.path.join(allocator, &.{local_config_path, config_name});
+    defer allocator.free(config_path);
+    log.info("Try to read config path in {s}", .{config_path});
+    const config_file = std.fs.openFileAbsolute(config_path, std.fs.File.OpenFlags{ .mode = File.OpenMode.read_only }) catch |err| {
+        switch (err) {
+            error.FileNotFound => {
+                // https://www.huy.rocks/everyday/01-09-2022-zig-json-in-5-minutes
+                const home_path = (try known.getPath(allocator, known.KnownFolder.home)) orelse unreachable;
+                defer allocator.free(home_path);
+                const cert_path_default = try std.fs.path.join(allocator, &.{home_path, "certificate.bin"});
+                defer allocator.free(cert_path_default);
+                const default_config = AppConfig {
+                    .cert_path = cert_path_default,
+                    .app_id = "",
+                    .channel_name = "test",
+                    .app_token = "",
+                    .log_path = "logs",
+                    .uid = 1234,
+                };
+                var str = std.ArrayList(u8).init(allocator);
+                defer str.deinit();
+                try std.json.stringify(default_config, .{}, str.writer());
+                const fmt = 
+                    \\Can't find config at {s} and we have created a default one for you. 
+                    \\ Please fill your app id and token. 
+                    \\ I will throw a error now.
+                ;
+                const dir = try std.fs.openDirAbsolute(local_config_path, std.fs.Dir.OpenDirOptions{.access_sub_paths = false, .no_follow = true});
+                const flags = std.fs.File.CreateFlags {
+                    .read = true,
+                    .truncate = true,
+                    .lock = std.fs.File.Lock.Exclusive,
+                    .lock_nonblocking = true,
+                    .mode = undefined,
+                    .intended_io_mode = undefined
+                };
+                const file = try dir.createFile(config_name, flags);
+                _ = try file.write(str.toOwnedSlice());
+                std.debug.panic(fmt, .{config_path});
+            },
+            else => {
+                return err;
+            }
+        }
+
+    };
+    defer config_file.close();
+    const config = try config_file.readToEndAlloc(allocator, 5120);
+    std.io.getStdOut().writer().print("Config Dump:\n{s}\n", .{config}) catch unreachable;
+
     const app_id: [:0]const u8 = "3759fd9101e04094869e7e69b9b3fe64";
     const channel_name: [:0]const u8 = "test";
     const app_token: [:0]const u8 = "007eJxTYGj+/iiralfpa76AYn8j3nwV82MezTuifDn7ws3WCPY901FgMDY3tUxLsTQ0MEw1MDGwNLEws0w1TzWzTLJMMk5LNTMJaGFJvnCVNfntww2sjAwQCOKzMJSkFpcwMAAA6z8gJA==";
@@ -73,7 +135,7 @@ pub fn main() !void {
 
     const cwd = std.fs.cwd();
     const cert_file = try cwd.openFile("certificate.bin", std.fs.File.OpenFlags{ .mode = File.OpenMode.read_only });
-    const cert_str: []u8 = try cert_file.readToEndAlloc(allocator, 10240);
+    const cert_str: []u8 = try cert_file.readToEndAlloc(allocator, 5120);
 
     const version: [*:0]const u8 = agora.agora_rtc_get_version();
     log.info("Agora SDK version: {s}", .{version});
