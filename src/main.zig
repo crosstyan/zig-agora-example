@@ -8,6 +8,7 @@ const defaultHandler = @import("handlers.zig");
 const log = std.log;
 const File = std.fs.File;
 const Allocator = std.mem.Allocator;
+const assert = std.debug.assert;
 
 fn panicWhenError(code: c_int) void {
     if (code != 0) {
@@ -63,7 +64,11 @@ fn toOwnedSentinel(comptime T: type, allocator: Allocator, from: []const T) ![*:
     var array_list = std.ArrayList(u8).init(allocator);
     try array_list.appendSlice(from);
     var slice_sentinel = try array_list.toOwnedSliceSentinel(0);
-    return @ptrCast([*:0]const T, slice_sentinel);
+    return slice_sentinel;
+}
+
+fn freeSentinel(comptime T: type, allocator: Allocator, sentinel: [*:0]const T) void {
+    allocator.free(sentinel[0..std.mem.len(sentinel)]);
 }
 
 pub fn main() !void {
@@ -101,9 +106,11 @@ pub fn main() !void {
                     \\Please fill your app id and token. 
                     \\I will throw a error now.
                 ;
-                const dir = try std.fs.openDirAbsolute(local_config_path, std.fs.Dir.OpenDirOptions{ .access_sub_paths = false, .no_follow = true });
+                var dir = try std.fs.openDirAbsolute(local_config_path, std.fs.Dir.OpenDirOptions{ .access_sub_paths = false, .no_follow = true });
+                defer dir.close();
                 const flags = std.fs.File.CreateFlags{ .read = true, .truncate = true, .lock = std.fs.File.Lock.Exclusive, .lock_nonblocking = true, .mode = undefined, .intended_io_mode = undefined };
                 const file = try dir.createFile(config_name, flags);
+                defer file.close();
                 _ = try file.write(str.toOwnedSlice());
                 log.err(fmt, .{config_path});
                 // exit normally
@@ -121,11 +128,15 @@ pub fn main() !void {
     var token_stream = std.json.TokenStream.init(config_raw);
     const config: AppConfig = try std.json.parse(AppConfig, &token_stream, .{ .allocator = allocator, .ignore_unknown_fields = false });
 
-    // https://www.huy.rocks/everyday/01-04-2022-zig-strings-in-5-minutes
-    const app_id = try toOwnedSentinel(u8, allocator, config.app_id);
+    var app_id = try toOwnedSentinel(u8, allocator, config.app_id);
+    defer allocator.free(app_id[0..std.mem.len(app_id)]);
+    assert(std.mem.len(app_id) == config.app_id.len);
     const channel_name = try toOwnedSentinel(u8, allocator, config.channel_name);
+    defer freeSentinel(u8, allocator, channel_name);
     const app_token = try toOwnedSentinel(u8, allocator, config.app_token);
+    defer freeSentinel(u8, allocator, app_token);
     const log_path = try toOwnedSentinel(u8, allocator, config.log_path);
+    defer freeSentinel(u8, allocator, log_path);
     const uid: u32 = config.uid;
     const pipeline: [:0]const u8 =
         \\ videotestsrc name=src is-live=true ! 
@@ -135,8 +146,7 @@ pub fn main() !void {
         \\ appsink name=agora 
     ;
 
-    const cwd = std.fs.cwd();
-    const cert_file = try cwd.openFile("certificate.bin", std.fs.File.OpenFlags{ .mode = File.OpenMode.read_only });
+    const cert_file = try std.fs.openFileAbsolute(config.cert_path, std.fs.File.OpenFlags{ .mode = File.OpenMode.read_only });
     const cert_str: []u8 = try cert_file.readToEndAlloc(allocator, 5120);
 
     const version: [*:0]const u8 = agora.agora_rtc_get_version();
@@ -255,8 +265,9 @@ pub fn main() !void {
     defer {
         _ = gst.gst_element_set_state(@ptrCast(*gst.GstElement, pipe), gst.GST_STATE_NULL);
     }
-    // sleep for 30 seconds
-    const secs = 30 * 1000 * 1000 * 1000;
+    // sleep for 10 seconds in main thread
+    // agora and gstreamer should work in other thread.
+    const secs = 10 * 1000 * 1000 * 1000;
     // parameter is in nanoseconds
     std.time.sleep(secs);
 }
