@@ -14,6 +14,8 @@ fn panicWhenError(code: c_int, what: []const u8) void {
     if (code != 0) {
         const err_str = agora.agora_rtc_err_2_str(code);
         std.debug.panic("[Agora] {s} failed: {s}", .{what, err_str});
+    } else {
+        log.info("[Agora] {s} success", .{what});
     }
 }
 
@@ -176,7 +178,6 @@ pub fn main() !void {
     var err: c_int = undefined;
     err = agora.agora_rtc_license_verify(@ptrCast([*]const u8, cert_str), @intCast(c_int, cert_str.len), null, 0);
     panicWhenError(err, "license verify");
-    log.info("agora_rtc_license_verify success", .{});
 
     const handler = agora.agora_rtc_event_handler_t{
         .on_join_channel_success = defaultHandler.on_join_channel_success,
@@ -223,9 +224,7 @@ pub fn main() !void {
     defer {
         err = agora.agora_rtc_fini();
         panicWhenError(err, "rtc fini");
-        log.info("agora_rtc_fini", .{});
     }
-    log.info("agora_rtc_init success", .{});
 
     var conn_id: u32 = undefined;
     err = agora.agora_rtc_create_connection(&conn_id);
@@ -233,18 +232,14 @@ pub fn main() !void {
     defer {
         err = agora.agora_rtc_destroy_connection(conn_id);
         panicWhenError(err, "rtc destroy connection");
-        log.info("agora_rtc_destroy_connection", .{});
     }
-    log.info("agora_rtc_create_connection success with conn_id {}", .{conn_id});
 
     err = agora.agora_rtc_join_channel(conn_id, channel_name, uid, app_token, &chan_opt);
     panicWhenError(err, "rtc join channel");
     defer {
         err = agora.agora_rtc_leave_channel(conn_id);
         panicWhenError(err, "rtc leave channel");
-        log.info("agora_rtc_leave_channel", .{});
     }
-    log.info("agora_rtc joined channel {s}", .{channel_name});
     _ = agora.agora_rtc_mute_local_audio(conn_id, true);
 
     var video_info = agora.video_frame_info_t{

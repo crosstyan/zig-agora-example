@@ -75,7 +75,7 @@ pub fn build(b: *Builder) !void {
     exe.setTarget(target);
     exe.install();
 
-    std.log.info("Build finished! \n", .{});
+    std.log.info("Build prepare finished! \n", .{});
 
     const run_cmd = exe.run();
     run_cmd.step.dependOn(b.getInstallStep());
