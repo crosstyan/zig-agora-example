@@ -1,6 +1,6 @@
 # Zig Agora RTSA example
 
-An example stream to Agora by GStreamer with [`[videotestsrc]`](https://gstreamer.freedesktop.org/documentation/videotestsrc/index.html)
+An example stream to Agora by GStreamer with [`videotestsrc`](https://gstreamer.freedesktop.org/documentation/videotestsrc/index.html)
 and H264. I tried H265 but no luck.
 
 I will say it's kind of crazy experience with zig. It will tell you when the allocator will kick in, 

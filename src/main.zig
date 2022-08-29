@@ -10,17 +10,17 @@ const File = std.fs.File;
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-fn panicWhenError(code: c_int) void {
+fn panicWhenError(code: c_int, what: []const u8) void {
     if (code != 0) {
         const err_str = agora.agora_rtc_err_2_str(code);
-        std.debug.panic("agora_rtc_license_verify failed: {s}", .{err_str});
+        std.debug.panic("[Agora] {s} failed: {s}", .{what, err_str});
     }
 }
 
-fn logWhenError(code: c_int) void {
+fn logWhenError(code: c_int, what: []const u8) void {
     if (code != 0) {
         const err_str = agora.agora_rtc_err_2_str(code);
-        log.err("agora_rtc_license_verify failed: {s}", .{err_str});
+        log.err("[Agora] {s} failed: {s}", .{what, err_str});
     }
 }
 
@@ -47,7 +47,7 @@ fn new_sample_cb(appsink: *gst.GstAppSink, user_data: ?*anyopaque) callconv(.C) 
     if (success) {
         var code = agora.agora_rtc_send_video_data(params.*.conn_id, info.data, info.size, params.*.video_info);
         if (code != 0) {
-            logWhenError(code);
+            logWhenError(code, "send video");
         } else {
             std.io.getStdOut().writer().print("*", .{}) catch unreachable;
         }
@@ -175,7 +175,7 @@ pub fn main() !void {
 
     var err: c_int = undefined;
     err = agora.agora_rtc_license_verify(@ptrCast([*]const u8, cert_str), @intCast(c_int, cert_str.len), null, 0);
-    panicWhenError(err);
+    panicWhenError(err, "license verify");
     log.info("agora_rtc_license_verify success", .{});
 
     const handler = agora.agora_rtc_event_handler_t{
@@ -219,29 +219,29 @@ pub fn main() !void {
     };
 
     err = agora.agora_rtc_init(app_id, &handler, &service_option);
-    panicWhenError(err);
+    panicWhenError(err, "rtc init");
     defer {
         err = agora.agora_rtc_fini();
-        panicWhenError(err);
+        panicWhenError(err, "rtc fini");
         log.info("agora_rtc_fini", .{});
     }
     log.info("agora_rtc_init success", .{});
 
     var conn_id: u32 = undefined;
     err = agora.agora_rtc_create_connection(&conn_id);
-    panicWhenError(err);
+    panicWhenError(err, "rtc create connection");
     defer {
         err = agora.agora_rtc_destroy_connection(conn_id);
-        panicWhenError(err);
+        panicWhenError(err, "rtc destroy connection");
         log.info("agora_rtc_destroy_connection", .{});
     }
     log.info("agora_rtc_create_connection success with conn_id {}", .{conn_id});
 
     err = agora.agora_rtc_join_channel(conn_id, channel_name, uid, app_token, &chan_opt);
-    panicWhenError(err);
+    panicWhenError(err, "rtc join channel");
     defer {
         err = agora.agora_rtc_leave_channel(conn_id);
-        panicWhenError(err);
+        panicWhenError(err, "rtc leave channel");
         log.info("agora_rtc_leave_channel", .{});
     }
     log.info("agora_rtc joined channel {s}", .{channel_name});
